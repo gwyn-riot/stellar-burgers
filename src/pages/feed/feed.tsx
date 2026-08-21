@@ -3,30 +3,25 @@ import { FeedUI } from '@ui-pages';
 import { FC, useEffect } from 'react';
 import { useDispatch, useSelector } from '../../services/store';
 import {
-  feedConnect,
-  feedDisconnect,
+  getFeeds,
+  selectFeedLoading,
   selectFeedOrders
 } from '../../services/slices/feed-slice';
-import { WS_URL } from '../../utils/ws-url';
 
 export const Feed: FC = () => {
   const dispatch = useDispatch();
   const orders = useSelector(selectFeedOrders);
+  const isLoading = useSelector(selectFeedLoading);
 
   useEffect(() => {
-    dispatch(feedConnect(`${WS_URL}/orders/all`));
-
-    return () => {
-      dispatch(feedDisconnect());
-    };
+    dispatch(getFeeds());
   }, [dispatch]);
 
   const handleGetFeeds = () => {
-    dispatch(feedDisconnect());
-    dispatch(feedConnect(`${WS_URL}/orders/all`));
+    dispatch(getFeeds());
   };
 
-  if (!orders.length) {
+  if (isLoading && !orders.length) {
     return <Preloader />;
   }
 

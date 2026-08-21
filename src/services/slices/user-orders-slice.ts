@@ -1,53 +1,22 @@
-import { createAction, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { getOrdersApi } from '@api';
 import { TOrder } from '@utils-types';
 import type { RootState } from '../store';
-import type { TWsActionTypes } from '../middleware/socket-middleware';
 
-const WS_USER_ORDERS_CONNECT = 'userOrders/wsConnect';
-const WS_USER_ORDERS_DISCONNECT = 'userOrders/wsDisconnect';
-const WS_USER_ORDERS_OPEN = 'userOrders/wsOpen';
-const WS_USER_ORDERS_CLOSE = 'userOrders/wsClose';
-const WS_USER_ORDERS_ERROR = 'userOrders/wsError';
-const WS_USER_ORDERS_MESSAGE = 'userOrders/wsMessage';
-
-export const userOrdersWsActions: TWsActionTypes = {
-  connect: WS_USER_ORDERS_CONNECT,
-  disconnect: WS_USER_ORDERS_DISCONNECT,
-  onOpen: WS_USER_ORDERS_OPEN,
-  onClose: WS_USER_ORDERS_CLOSE,
-  onError: WS_USER_ORDERS_ERROR,
-  onMessage: WS_USER_ORDERS_MESSAGE
-};
-
-export const userOrdersConnect = (url: string) => ({
-  type: WS_USER_ORDERS_CONNECT,
-  payload: url
-});
-export const userOrdersDisconnect = () => ({
-  type: WS_USER_ORDERS_DISCONNECT
-});
-
-type TUserOrdersMessage = {
-  success: boolean;
-  orders: TOrder[];
-};
-
-const userOrdersWsOpen = createAction(WS_USER_ORDERS_OPEN);
-const userOrdersWsClose = createAction(WS_USER_ORDERS_CLOSE);
-const userOrdersWsError = createAction<string>(WS_USER_ORDERS_ERROR);
-const userOrdersWsMessage = createAction<TUserOrdersMessage>(
-  WS_USER_ORDERS_MESSAGE
+export const getUserOrders = createAsyncThunk(
+  'userOrders/getOrders',
+  getOrdersApi
 );
 
 type TUserOrdersState = {
   orders: TOrder[];
-  isConnected: boolean;
-  error: string | null;
+  isLoading: boolean;
+  error: string | null | undefined;
 };
 
 const initialState: TUserOrdersState = {
   orders: [],
-  isConnected: false,
+  isLoading: false,
   error: null
 };
 
@@ -57,22 +26,23 @@ const userOrdersSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(userOrdersWsOpen, (state) => {
-        state.isConnected = true;
+      .addCase(getUserOrders.pending, (state) => {
+        state.isLoading = true;
         state.error = null;
       })
-      .addCase(userOrdersWsClose, (state) => {
-        state.isConnected = false;
+      .addCase(getUserOrders.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.orders = action.payload;
       })
-      .addCase(userOrdersWsError, (state, action) => {
-        state.error = action.payload;
-      })
-      .addCase(userOrdersWsMessage, (state, action) => {
-        state.orders = action.payload.orders;
+      .addCase(getUserOrders.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message;
       });
   }
 });
 
 export const selectUserOrders = (state: RootState) => state.userOrders.orders;
+export const selectUserOrdersLoading = (state: RootState) =>
+  state.userOrders.isLoading;
 
 export default userOrdersSlice.reducer;
